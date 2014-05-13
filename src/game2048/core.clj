@@ -61,9 +61,6 @@
 (defn merge-left [row]
   (merge-row row :left))
 
-(defn merge-right [row]
-  (merge-row row :right))
-
 (defn move-left [matrix]
   (vec (map merge-left matrix)))
 
@@ -82,41 +79,27 @@
   (vec (transpose (move-right (transpose matrix)))))
 
 (defn move [matrix direction]
+  (println "move" direction)
   (case direction
     :left (move-left matrix)
     :right (move-right matrix)
     :up (move-up matrix)
-    :down (move-down matrix)))
+    :down (move-down matrix)
+    nil matrix))
 
-(defn can-move [matrix direction]
+(defn can-move? [matrix direction]
   (not= matrix (move matrix direction)))
 
-(can-move [[1 1 0 1] [2 2 1 0] [1 2 1 2] [1 0 0 0 ]] :right)
-
-(def m [[1 1 0 1] [2 2 1 0] [1 2 1 2] [1 0 0 0 ]])
-(move-right m)
-(move-left m)
-(move-up m)
-(move-down m)
-
-(def m1 [[0 1 1 1] [2 2 1 0] [1 2 1 2] [1 0 0 0 ]])
-(move-left m1)
-(move-right m1)
-(move-up m1)
-(move-down m1)
-
-
-
 (defn move-and-insert [matrix direction]
-  (insert-new (move matrix direction)))
-
-(move-and-insert m :left)
+  (if (can-move? matrix direction)
+    (insert-new (move matrix direction))
+    matrix))
 
 ; GUI PART
 (def lattice-size 50)
 
 (def margin 5)
-(def padding 10)
+(def padding 25)
 (def width  (* matrix-size (+ lattice-size margin)))
 (def height  (* matrix-size (+ lattice-size margin)))
 
@@ -126,37 +109,18 @@
             VK_UP    :up
             VK_DOWN  :down})
 
-
 (defn cord-to-lattice [cord]
   (let [[x y] cord]
-    (if (or (nil? x) (nil? y))
-      []
-    [(* x (+ margin lattice-size)) (* y (+ margin lattice-size)) lattice-size lattice-size])))
+    [(* y (+ margin lattice-size)) (* x (+ margin lattice-size)) lattice-size lattice-size]))
 
+(defn index-matrix [matrix]
+    (for [x (range (count matrix))
+        y (range (count matrix))]
+    {:cord [x y] :v (get-in matrix [x y]) :color YELLOW}))
 
-(cord-to-lattice [1 2])
 (defn fill-lattice1 [g {cord :cord}]
   (let [[x y width height] (cord-to-lattice cord)]
     (list x y)))
-
-
-(defn paint1 [g matrix]
-  (let [matrix (index-matrix matrix)])
-  (doseq [lattice matrix]
-    (fill-lattice1 g lattice)))
-
-(doseq [x [ 1 2 3]]
-  (println x))
-
-(index-matrix (create-new-matrix))
-(doseq [x (index-matrix (create-new-matrix))] (println (:cord x)))
-
-
-(doseq [lattice (index-matrix (create-new-matrix))]
-    (fill-lattice1 0 lattice))
-
-(fill-lattice1 0 (second (index-matrix (create-new-matrix))))
-(paint1 100 (create-new-matrix))
 
 (defn fill-lattice [g {cord :cord v :v color :color}]
   (let [[x y width height] (cord-to-lattice cord)]
@@ -165,15 +129,13 @@
     (.setColor g BLACK)
     (.drawString g (str v) (+ x padding) (+ padding y))))
 
-(defn index-matrix [matrix]
-    (for [x (range (count matrix))
-        y (range (count matrix))]
-    {:cord [x y] :v (get-in matrix [x y]) :color YELLOW}))
-
 (defn paint [g matrix]
-  (let [matrix (index-matrix matrix)])
-  (doseq [lattice (vec matrix)]
-    (fill-lattice g lattice)))
+  (let [indexed-matrix (index-matrix matrix)]
+  (doseq [lattice indexed-matrix]
+    (fill-lattice g lattice))))
+
+(defn update-matrix [rmatrix matrix]
+  (dosync (ref-set rmatrix matrix)))
 
 (defn game-panel [frame matrix]
   (proxy [JPanel ActionListener KeyListener] []
@@ -183,22 +145,8 @@
     (actionPerformed [e]
                     (.repaint this))
     (keyPressed [e]
-                (move @matrix (dirs (.getKeyCode e))))
-    (getPreferredSize []
-                      (Dimension. width height))
-    (keyReleased [e])
-    (keyTyped [e])))
-
-
-(defn test-panel [frame matrix]
-    (proxy [JPanel ActionListener KeyListener] []
-    (paintComponent [g]
-                    (proxy-super paintComponent g)
-                    (paint g @matrix)
-                    (fill-lattice g {:cord [ 0 1] :v 10 :color YELLOW}))
-    (actionPerformed [e]
-                    (.repaint this))
-    (keyPressed [e])
+                (update-matrix matrix (move-and-insert @matrix (dirs (.getKeyCode e))))
+                (.repaint this))
     (getPreferredSize []
                       (Dimension. width height))
     (keyReleased [e])
@@ -216,11 +164,7 @@
       (.pack)
       (.setVisible true))
     [matrix]))
-(game)
 
 
 (defn -main [& args]
   (game))
-
-
-
