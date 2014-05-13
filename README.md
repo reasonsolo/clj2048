@@ -1,10 +1,10 @@
 # game2048
 
-A Clojure library designed to ... well, that part is up to you.
+A Clojure clone of '2048' game, aimed at learning Clojure. Simple, crude, and still buggy.
 
 ## Usage
 
-FIXME
+`lein run` or run the jar with JRE/JDK.
 
 ## License
 
