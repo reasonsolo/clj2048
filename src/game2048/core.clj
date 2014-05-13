@@ -30,7 +30,7 @@
       insert-new ))
 
 (defn merge-raw-row [row]
-  (loop [rest-row (rest row)
+  (loop [rest-row (remove zero? (rest row))
          head (first row)
          new-row []]
     (if (or (= (first rest-row) head) (empty? rest-row))
